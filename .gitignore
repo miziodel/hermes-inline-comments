@@ -1,0 +1,8 @@
+# macOS / editors
+.DS_Store
+*.swp
+
+# nothing here needs a dependency or a build; keep the tree clean anyway
+node_modules/
+dist/
+*.log
