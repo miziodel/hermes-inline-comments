@@ -26,6 +26,18 @@ A file inside the workspace appears with a path relative to the workspace root. 
 file outside the workspace keeps the absolute path. The session runs in the
 workspace root, so both forms resolve.
 
+## Status
+
+**Alpha, and under heavy testing.** The behaviour can still change. The checks in
+`test/` cover the parts that broke so far, and no more.
+
+**This plugin is a workaround.** The right home for this function is the core of
+Hermes Desktop: a comment mode that covers a text file, not a web page only. A
+core function would live in the preview pane, next to the existing comment mode.
+It would need no plugin, no second renderer and no unofficial read. When the
+core has it, this repository becomes redundant. Until then, this plugin shows that
+the workflow helps.
+
 ## Why this is a plugin
 
 Hermes Desktop has a comment mode. That mode is for the in-app browser only. It
@@ -145,7 +157,7 @@ Two behaviours are worth knowing:
   the draft stays short and readable, which matters because the session receives
   it at every turn. The pane shows the captured text of the line next to the note,
   so you can check a comment before you send it. An automatic staleness check is
-  not implemented.
+  not implemented. See *A better anchor* below for the direction that fixes this.
 - **No screenshot.** The plugin SDK gives no capture function for the app window.
   The comment mode of the in-app browser keeps that function for web pages.
 - **No menu entry in the file tree.** The context menu of the file tree is
@@ -163,6 +175,44 @@ Two behaviours are worth knowing:
   These functions are IPC bridges of the app, not part of the curated `ctx.os`
   door. An app update can change or remove them without notice, and then the pane
   stops reading files. There is no support guarantee.
+
+## A better anchor (future direction)
+
+A comment stores a line range, and a line range is a coordinate: one paragraph
+inserted above it moves every comment below. The plugin captures the text of the
+line today, and it shows that text in the pane. It does not compare the text
+against the file, so it cannot notice the drift.
+
+Three approaches solve this. They cost more as you go down the list.
+
+1. **A content hash.** Store a hash of the anchored text next to the line range.
+   The check after a reload is one string compare, and a block that moved costs
+   nothing to confirm. A hash cannot follow an edit *inside* the text, because the
+   edit changes it. A hash therefore needs a fallback.
+2. **Context anchoring, also called fuzzy patching.** Store a tuple of context
+   instead of a coordinate:
+
+   ```
+   { target_text, prev_lines, next_lines, approx_line_index }
+   ```
+
+   On send, the plugin looks near the approximate index, scores every candidate
+   window on the prefix and the suffix, and takes the best match. A small edit
+   inside the target still fits a tolerant window, and a block that moved is
+   found again. This is the model of the W3C Web Annotation Data Model:
+   `TextQuoteSelector` (prefix, exact, suffix) selects the text, and
+   `TextPositionSelector` holds the approximate index as a hint. `git apply` fuzz
+   and `patch(1)` work the same way.
+3. **A hybrid, and probably the best fit here.** Keep the approximate index for a
+   direct hit. Confirm it with the hash of the target text. Fall back to the fuzzy
+   window when the check fails. Report an "anchor lost" warning when nothing
+   matches.
+
+One point decides the design. **The anchor belongs to the comment list of the
+plugin, not to the draft.** The plugin resolves the tuple into a line range when
+it writes the draft. The draft therefore keeps the compact `<path>:` and
+`- Lx-y: note` form. A comment whose anchor disappeared is reported, instead of
+pointing at a wrong line.
 
 ## Security
 

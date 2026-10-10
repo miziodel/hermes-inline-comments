@@ -6,7 +6,9 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.1.0] - 2026-10-10
 
-First release.
+First release. **Alpha**: the plugin is under heavy testing, and the behaviour
+can still change. The right home for this function is the core of Hermes Desktop
+(see the README).
 
 ### Added
 
